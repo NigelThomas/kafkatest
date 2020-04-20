@@ -104,3 +104,34 @@ Kafka | We use docker image `wurstmeister/kafka` to form a kafka cluster of one 
 Kafkacat | we use docker image `edenhill/kafkacat` to pipe data into and out of kafka topics
 
 
+## Using sqlstream/complete
+
+### Source data
+
+We can rely on the local Kafka broker (as long as we don't stop it!).
+
+Dribble data into the `IoT` topic:
+
+```
+. /etc/sqlstream/environment
+$SQLSTREAM_HOME/demo/IoT/start.sh
+```
+
+This launches the dribbler process in the background, so the foreground terminal can be used for monitoring.
+
+### Target Data
+
+We can subscribe to the target topic `iot_sink` using either `kafka-console-consumer.sh` or `kafkacat`:
+
+```
+kafkacat -C -b $HOSTNAME -t iot_sink
+```
+
+You can exit after a given number of records using `-c <count>`.
+
+
+
+
+
+
+

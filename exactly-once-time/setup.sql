@@ -21,6 +21,9 @@ EXTERNAL NAME 'class:com.sqlstream.plugin.timesync.ThrottleStream.throttle';
 
 CREATE OR REPLACE FOREIGN STREAM "StreamLab_Output_iot"."sensor_data_fs"
 (
+    SQLSTREAM_PROV_KAFKA_PARTITION INTEGER,
+    SQLSTREAM_PROV_KAFKA_OFFSET BIGINT,
+    SQLSTREAM_PROV_KAFKA_TIMESTAMP TIMESTAMP,
     "rt" TIMESTAMP,
     "readings_uuid" VARCHAR(64),
     "recorded_offset" TIMESTAMP,
@@ -90,6 +93,9 @@ OPTIONS (
 
 CREATE OR REPLACE STREAM "StreamLab_Output_iot"."sensor_data_ns"
 (
+    "kpartition" INTEGER,
+    "koffset" BIGINT,
+    "ktimestamp" TIMESTAMP,
     "rt" TIMESTAMP,
     "readings_uuid" VARCHAR(64),
     "recorded_offset" TIMESTAMP,
@@ -116,7 +122,57 @@ CREATE OR REPLACE STREAM "StreamLab_Output_iot"."sensor_data_ns"
 -- pump including throttle - easier for early testing
 CREATE OR REPLACE PUMP "StreamLab_Output_iot"."source-to-sensor_data-Pump" STOPPED AS
 INSERT INTO "StreamLab_Output_iot"."sensor_data_ns" 
-SELECT STREAM * 
+(
+    "kpartition",
+    "koffset",
+    "ktimestamp",
+    "rt",
+    "readings_uuid",
+    "recorded_offset",
+    "device_key",
+    "account_key",
+    "signal_strength",
+    "model_code",
+    "latitude",
+    "longitude",
+    "channel",
+    "logged",
+    "value",
+    "unit",
+    "initiated_by",
+    "recorded_at",
+    "type",
+    "sample_count",
+    "condition",
+    "low_battery",
+    "probe_connected",
+    "contact_closure_enabled_and_open"
+)
+SELECT STREAM 
+    SQLSTREAM_PROV_KAFKA_PARTITION,
+    SQLSTREAM_PROV_KAFKA_OFFSET,
+    SQLSTREAM_PROV_KAFKA_TIMESTAMP,
+    "rt",
+    "readings_uuid",
+    "recorded_offset",
+    "device_key",
+    "account_key",
+    "signal_strength",
+    "model_code",
+    "latitude",
+    "longitude",
+    "channel",
+    "logged",
+    "value",
+    "unit",
+    "initiated_by",
+    "recorded_at",
+    "type",
+    "sample_count",
+    "condition",
+    "low_battery",
+    "probe_connected",
+    "contact_closure_enabled_and_open"
 FROM STREAM("StreamLab_Output_iot"."sensor_data_throttlefunc" (CURSOR(SELECT STREAM * FROM "StreamLab_Output_iot"."sensor_data_fs"), 1000));
 
 -- pump excluding throttle
@@ -131,6 +187,9 @@ SELECT STREAM * FROM "StreamLab_Output_iot"."sensor_data_ns";
 
 CREATE OR REPLACE FOREIGN STREAM "StreamLab_Output_iot"."pipeline_2_out_sink_1_fs"
 (
+    "kpartition" INTEGER,
+    "koffset" BIGINT,
+    "ktimestamp" TIMESTAMP,
     "rt" TIMESTAMP,
     "readings_uuid" VARCHAR(64),
     "recorded_offset" TIMESTAMP,
