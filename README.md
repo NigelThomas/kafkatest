@@ -69,7 +69,13 @@ This will test the use of (partition, offset) tuples for exactly once processing
 
 We can have a UDX that fails
 * either when a control message is injected (time dependent, independent of main data flow)
-* when it sees a particular data value in a particular column (repeatable / predictable); on restart the special data value in the first unprocessed row to be read should be ignored otherwise we can never restart
+* after a specified or random number of records (so can be repeatable / predictable)
+
+Or we can literally stop / kill SQLstream with degrees of prejudice
+* Stop the pumps
+* Stop the service
+* Kill the process
+* Kill the entire container
 
 ## Detecting failures
 
@@ -79,7 +85,7 @@ This test is more about recovery than failure detection. We can detect "end of m
 
 Type | Description
 --- | ----
-Basic | IntrStop and restart pumps
+Basic | Stop and restart pumps
 Crash Recovery | Kill the SQLstream server/container; restart the server
 
 ## Validating results

@@ -8,6 +8,15 @@ CREATE OR REPLACE SCHEMA "StreamLab_Output_iot";
 
 --  StreamApp start
 
+-- throttle function
+
+CREATE OR REPLACE FUNCTION "StreamLab_Output_iot"."sensor_data_throttlefunc"(inputRows CURSOR, throttleScale int)
+    returns TABLE(inputRows.*)
+LANGUAGE JAVA
+PARAMETER STYLE SYSTEM DEFINED JAVA
+NO SQL
+EXTERNAL NAME 'class:com.sqlstream.plugin.timesync.ThrottleStream.throttle';
+
 --  ECDA reading adapter/agent with Discovery support
 
 CREATE OR REPLACE FOREIGN STREAM "StreamLab_Output_iot"."sensor_data_fs"
@@ -103,10 +112,19 @@ CREATE OR REPLACE STREAM "StreamLab_Output_iot"."sensor_data_ns"
     "probe_connected" BOOLEAN,
     "contact_closure_enabled_and_open" BOOLEAN
 );
+
+-- pump including throttle - easier for early testing
 CREATE OR REPLACE PUMP "StreamLab_Output_iot"."source-to-sensor_data-Pump" STOPPED AS
-INSERT INTO "StreamLab_Output_iot"."sensor_data_ns"
-SELECT STREAM *
-FROM "StreamLab_Output_iot"."sensor_data_fs";
+INSERT INTO "StreamLab_Output_iot"."sensor_data_ns" 
+SELECT STREAM * 
+FROM STREAM("StreamLab_Output_iot"."sensor_data_throttlefunc" (CURSOR(SELECT STREAM * FROM "StreamLab_Output_iot"."sensor_data_fs"), 1000));
+
+-- pump excluding throttle
+--CREATE OR REPLACE PUMP "StreamLab_Output_iot"."source-to-sensor_data-Pump" STOPPED AS
+--INSERT INTO "StreamLab_Output_iot"."sensor_data_ns"
+--SELECT STREAM *
+--FROM "StreamLab_Output_iot"."sensor_data_fs";
+
 CREATE OR REPLACE VIEW "StreamLab_Output_iot"."sensor_data" AS
 SELECT STREAM * FROM "StreamLab_Output_iot"."sensor_data_ns";
 
