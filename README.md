@@ -65,6 +65,18 @@ Workaround:
 
 This will test the use of (partition, offset) tuples for exactly once processing. More details TBA.
 
+### window-perf
+
+This test is intended to take the output of the data generator and see how much time and memory is used in reading the data files and building up window state.
+
+Initially data is supplied in file format (future: supply via Kafka).
+
+The data generator is documented below.
+
+Data is produced in a flat file format; it is easy to break data down into smaller files using standard unix utilities like `split`. 
+
+
+
 ## Generating failures
 
 We can have a UDX that fails
@@ -129,7 +141,53 @@ kafkacat -C -b $HOSTNAME -t iot_sink
 
 You can exit after a given number of records using `-c <count>`.
 
+## generate_data.py
 
+Data generator that can build data files containing `timestamp`, `userId`, `deviceId`, `visitId` and N feature values.
+
+```
+$ python generate_data.py --help
+usage: generate_data.py [-h] [-c USER_COUNT] [-t OUTPUT_TIME]
+                        [-r TRANSACTION_RATE] -F FEATURE_FILE [-k] [-n]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -c USER_COUNT, --user_count USER_COUNT
+                        number of users to be created
+  -t OUTPUT_TIME, --output_time OUTPUT_TIME
+                        time: number of hours of calls (default 24)
+  -r TRANSACTION_RATE, --transaction_rate TRANSACTION_RATE
+                        average number of transactions per second (default 10)
+  -F FEATURE_FILE, --feature_file FEATURE_FILE
+                        name of input file describing features and their
+                        cardinality
+  -k, --trickle         Trickle one second of data each second
+  -n, --no_trickle      No trickling - emit data immediately
+```
+
+The feature file looks like this:
+```
+$ cat feature_file.csv 
+name,type,length,cardinality
+f01,x,5,10
+f02,x,10,10
+f03,x,10,10
+f04,x,10,10
+f05,x,10,100
+f06,x,10,100
+f07,x,20,1000
+f08,x,20,1000
+f09,x,20,1000
+f10,x,20,1000
+f11,x,20,1000
+```
+
+At the moment `type` isn't used. I anticipate the types are:
+* `categorical` (all are now) -- where we generate a list of values of the right length and cardinality
+* `random` - where we generate the value in the same way at each transaction (no cardinality)
+* `numeric` - some int or float in a range, maybe with a distribution function
+
+* 
 
 
 
