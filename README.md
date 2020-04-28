@@ -187,9 +187,13 @@ At the moment `type` isn't used. I anticipate the types are:
 * `random` - where we generate the value in the same way at each transaction (no cardinality)
 * `numeric` - some int or float in a range, maybe with a distribution function
 
-* 
+### Splitting test data
 
+We can `split` and if wanted `gzip` the output data like this (generating data for 1 week for 11 features):
+```
+python generate_data.py -F feature_file.csv -c 1000000 -n -t 168 | split --bytes=50M --filter='gzip > data/$FILE.gz' - data
+```
 
-
+Generating and compressing one week of data for 11 features as currently defined takes about 5 minutes. 610M compressed.
 
 
