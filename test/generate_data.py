@@ -46,13 +46,26 @@ def randomword(length, cardinality, idx):
    baseval = str(idx).rjust(l, '0')
    return baseval+ randomstring(length-l)
 
+def str_result(value, coltype, context):
+    try:
+        if coltype == "text":
+            return value
+        else:
+            return str(value).decode('utf-8')
+    except UnicodeEncodeError:
+        logger.error("Unable to handle value "+context)
+        print(value)
+        print (type(value))
+
 # 
-def generate_lov_value(lovName, column):
+def generate_lov_value(lovName, column, coltype):
     lovIndex = lov_names.index(lovName)
     lov_data = lov_descs[lovIndex]['lovdata']
     entryIdx = lovEntries[lovIndex]
-    result = str(lov_data[entryIdx][column])
-    logger.debug("generating lov for "+lovName+"."+column+" entryIdx="+str(entryIdx)+" = "+result)
+    context = "generating lov for "+lovName+"."+column+" entryIdx="+str(entryIdx)+", coltype="+coltype
+    logger.debug(context)
+    result = str_result(lov_data[entryIdx][column], coltype, context)
+    #logger.debug("generating lov for "+lovName+"."+column+" entryIdx="+str(entryIdx)+" = "+result)
     return result
 
 def generate_value(fdesc):
@@ -66,14 +79,14 @@ def generate_value(fdesc):
         return fvalues[random.randint(0,l-1)]
 
     elif ftype == 'int':
-        return str(random.randint(fdesc['start'], fdesc['end']))
+        return str(random.randint(fdesc['start'], fdesc['end'])).decode('utf-8')
 
     elif ftype == 'float':
-        return fdesc['format'].format(random.uniform(fdesc['start'], fdesc['end']))
+        return fdesc['format'].format(random.uniform(fdesc['start'], fdesc['end'])).decode('utf-8')
 
     elif ftype == 'bool':
         # ignore flength and fstart, return True or False
-        return str(random.randint(0,1) == 1)
+        return str(random.randint(0,1) == 1).decode('utf-8')
 
     elif ftype == 'text':
         # generate a completely random string of required length
@@ -83,7 +96,7 @@ def generate_value(fdesc):
         # TODO return the selected column of the selected row for this lov
         
         # get the randomly selected entry for this lov
-        return generate_lov_value(fdesc['lovName'], fdesc['column'])
+        return generate_lov_value(fdesc['lovName'], fdesc['column'], fdesc['coltype'])
 
     else:
         return "UNEXPECTED TYPE "+ftype
@@ -105,13 +118,17 @@ for lov_desc in lov_descs:
         with open(lov_desc['fileName']) as lovf:
             lov_desc['lovdata'] = json.load(lovf)
             logger.info("loaded LOV "+lov_desc['lovName']+" from "+lov_desc['fileName']+" with "+str(len(lov_desc['lovdata'])) + " entries")
-            logger.info(json.dumps(lov_desc['lovdata'], indent=2))
+            logger.debug(json.dumps(lov_desc['lovdata'], indent=2))
 
-    elif 'lovdata' not in lov_desc:
+    elif 'lovdata' in lov_desc:
+        logger.info("LOV " + lov_desc['lovName'] + " is supplied in the feature file")
+
+    else:
         # we don't have any LOV data either in the feature file or an external file
         logger.error("No LOV data supplied for "+lov_desc['lovName'])  
         exit(-1)
 
+    # Record the name of the LOV in a convenient list
     lov_names.append(lov_desc['lovName'])
 
 
@@ -122,11 +139,21 @@ feature_names = []
 for feature_desc in feature_descs:
 
     feature_names.append(feature_desc['name'])
-    
+
+    if feature_desc['type'] == "cat":
+        feature_desc['coltype'] = "text"
+    elif feature_desc['type'] != 'lov':
+        # inherit coltype from feature type exept for cat and lov
+        # cat is always text, lov defines it already
+        feature_desc['coltype'] = feature_desc['type']
+    elif 'coltype' not in feature_desc:
+        logger.error("no coltype for feature:"+feature_desc['name'])
+        exit(-2);
+
     # Categorical features with generated lov
     if feature_desc['type'] == 'cat':
         fvalues = []
-        logger.info("preparing values for cat feature "+feature_desc['name'])
+        logger.debug("preparing values for cat feature "+feature_desc['name'])
         # make a list of values for this feature
         for i in xrange(feature_desc['cardinality']):
             # start the value with the index (zero filled) then fill with random chars
@@ -201,8 +228,11 @@ for calltime in xrange(output_seconds):
             fdesc = feature_descs[f]
             concat_features.append(generate_value(fdesc))
 
-        print "%010d|%d|%d|%s|%s"% (calltime+startsecs, userId, deviceId, visitId , string.join(concat_features,'|'))
-    
+        print "%010d|%d|%d|%s"% (calltime+startsecs, userId, deviceId, visitId ),
+        for fv in concat_features:
+            print "|",
+            print fv.encode('utf-8'),
+        print ""
    
     # If we want to trickle the data:
     if args.trickle:
