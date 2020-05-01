@@ -1,0 +1,15 @@
+[{"city_code":"1","city":"Tokyo","state":"Tōkyō","country":"Japan","country_code":"JPN","lat":35.6850,"lon":139.7514}
+,{"city_code":"2","city":"New York","state":"New York","country":"United States","country_code":"USA","lat":40.6943,"lon":-73.9249}
+,{"city_code":"3","city":"Mexico City","state":"Ciudad de México","country":"Mexico","country_code":"MEX","lat":19.4424,"lon":-99.1310}
+,{"city_code":"4","city":"Mumbai","state":"Mahārāshtra","country":"India","country_code":"IND","lat":19.0170,"lon":72.8570}
+,{"city_code":"5","city":"Sao Paulo","state":"São Paulo","country":"Brazil","country_code":"BRA","lat":-23.5587,"lon":-46.6250}
+,{"city_code":"6","city":"Delhi","state":"Delhi","country":"India","country_code":"IND","lat":28.6700,"lon":77.2300}
+,{"city_code":"7","city":"Shanghai","state":"Shanghai","country":"China","country_code":"CHN","lat":31.2165,"lon":121.4365}
+,{"city_code":"8","city":"Kolkata","state":"West Bengal","country":"India","country_code":"IND","lat":22.4950,"lon":88.3247}
+,{"city_code":"9","city":"Los Angeles","state":"California","country":"United States","country_code":"USA","lat":34.1139,"lon":-118.4068}
+,{"city_code":"10","city":"Dhaka","state":"Dhaka","country":"Bangladesh","country_code":"BGD","lat":23.7231,"lon":90.4086}
+,{"city_code":"11","city":"Buenos Aires","state":"Buenos Aires","country":"Argentina","country_code":"ARG","lat":-34.6025,"lon":-58.3975}
+,{"city_code":"12","city":"Karachi","state":"Sindh","country":"Pakistan","country_code":"PAK","lat":24.8700,"lon":66.9900}
+,{"city_code":"13","city":"Cairo","state":"Al Qāhirah","country":"Egypt","country_code":"EGY","lat":30.0500,"lon":31.2500}
+,{"city_code":"14","city":"Rio de Janeiro","state":"Rio de Janeiro","country":"Brazil","country_code":"BRA","lat":-22.9250,"lon":-43.2250}
+]

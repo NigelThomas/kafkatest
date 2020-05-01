@@ -9,6 +9,14 @@ import json
 import time
 import argparse
 import csv
+import logging
+
+
+logger = logging.getLogger('generate_data')
+logger.setLevel(logging.INFO)
+ch = logging.StreamHandler()
+ch.setLevel(logging.INFO)
+logger.addHandler(ch)
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-c","--user_count", type=int, default=1000, help="number of users to be created")
@@ -29,42 +37,105 @@ max_trans_per_sec = args.transaction_rate * 2
 # initially use CSV format:
 # timestamp|user|device|visitId|f1|f2|...|fN
 
+def randomstring(length):
+    return (''.join([random.choice(string.ascii_letters) for i in xrange(length)]))
+
 # TODO we are assuming length > number of dgits to manage cardinality (ie 3 for 1000)
 def randomword(length, cardinality, idx):
    l = len(str(cardinality-1))
    baseval = str(idx).rjust(l, '0')
-   return baseval+ ''.join(random.choice(string.ascii_letters) for i in range(length-l))
+   return baseval+ randomstring(length-l)
+
+# 
+def generate_lov_value(lovName, column):
+    lovIndex = lov_names.index(lovName)
+    lov_data = lov_descs[lovIndex]['lovdata']
+    entryIdx = lovEntries[lovIndex]
+    result = str(lov_data[entryIdx][column])
+    logger.debug("generating lov for "+lovName+"."+column+" entryIdx="+str(entryIdx)+" = "+result)
+    return result
+
+def generate_value(fdesc):
+    ftype = fdesc['type']
+    logger.debug("generating value for "+str(fdesc))
+
+    if ftype == 'cat':
+        fvalues = fdesc['fvalues']
+        l = len(fvalues)
+        # pick a random value for this feature
+        return fvalues[random.randint(0,l-1)]
+
+    elif ftype == 'int':
+        return str(random.randint(fdesc['start'], fdesc['end']))
+
+    elif ftype == 'float':
+        return fdesc['format'].format(random.uniform(fdesc['start'], fdesc['end']))
+
+    elif ftype == 'bool':
+        # ignore flength and fstart, return True or False
+        return str(random.randint(0,1) == 1)
+
+    elif ftype == 'text':
+        # generate a completely random string of required length
+        return randomstring(fdesc['length'])
+
+    elif ftype == 'lov':
+        # TODO return the selected column of the selected row for this lov
+        
+        # get the randomly selected entry for this lov
+        return generate_lov_value(fdesc['lovName'], fdesc['column'])
+
+    else:
+        return "UNEXPECTED TYPE "+ftype
 
 
-features = []
-feature_descs = []
-feature_count=0
+# TODO this should be an argument
+fileName = 'feature_file.json'
+
+with open(fileName) as f:
+    feature_defs = json.load(f);
+    logger.info("loaded "+str(len(feature_defs['features']))+ " feature definitions from "+fileName)
+
+lov_descs = feature_defs['lovs']
+lov_names = []
+
+for lov_desc in lov_descs:
+    if 'fileName' in lov_desc:
+        # read in the JSON values from specified file
+        with open(lov_desc['fileName']) as lovf:
+            lov_desc['lovdata'] = json.load(lovf)
+            logger.info("loaded LOV "+lov_desc['lovName']+" from "+lov_desc['fileName']+" with "+str(len(lov_desc['lovdata'])) + " entries")
+            logger.info(json.dumps(lov_desc['lovdata'], indent=2))
+
+    elif 'lovdata' not in lov_desc:
+        # we don't have any LOV data either in the feature file or an external file
+        logger.error("No LOV data supplied for "+lov_desc['lovName'])  
+        exit(-1)
+
+    lov_names.append(lov_desc['lovName'])
+
+
+feature_descs = feature_defs['features']
+feature_count = len(feature_descs)
 feature_names = []
 
-with open(args.feature_file, "r") as f:
-    freader = csv.DictReader(f, delimiter=',')
+for feature_desc in feature_descs:
 
-    for row in freader:
-        feature_desc = {'name':row['name'],'type':row['type'],'length':int(row['length']),'cardinality':int(row['cardinality']), 'fvalues':[]}
-
-        feature_names.append(feature_desc['name'])
-        
-        # generate feature values
+    feature_names.append(feature_desc['name'])
+    
+    # Categorical features with generated lov
+    if feature_desc['type'] == 'cat':
         fvalues = []
-        for i in range(feature_desc['cardinality']):
+        logger.info("preparing values for cat feature "+feature_desc['name'])
+        # make a list of values for this feature
+        for i in xrange(feature_desc['cardinality']):
             # start the value with the index (zero filled) then fill with random chars
             fvalues.append(randomword(feature_desc['length'],feature_desc['cardinality'], i))
-
+        
         feature_desc['fvalues'] = fvalues
 
-        feature_descs.append(feature_desc)
-        features.append(feature_descs)
 
-        feature_count += 1
-
-    f.close()
-
-# TODO save the generated features for later re-use
+# TODO save the generated features (including values) for later re-use
 # print json.dumps(features)
 
 # just number the users
@@ -76,7 +147,7 @@ users = []
 
 # Generate the initial list of users and devices
 
-for i in range(startrange, startrange+int(args.user_count)):
+for i in xrange(startrange, startrange+int(args.user_count)):
 
     device_count=int(random.triangular(1,10,2))
     user_devices = []
@@ -96,17 +167,18 @@ for i in range(startrange, startrange+int(args.user_count)):
 startsecs = time.time()
 
 
+
 # Generate data for this many "seconds"
 
 print "calltime|userid|deviceid|visitId|"+string.join(feature_names,'|')
 
 output_seconds = int(3600 * args.output_time)
 
-for calltime in range(output_seconds):
+for calltime in xrange(output_seconds):
 
     # Generate up to this many transactions per second
 
-    for counter in range(random.randint(1,max_trans_per_sec)):
+    for counter in xrange(random.randint(1,max_trans_per_sec)):
         # choose a random subscriber
         user = users[random.randrange(len(users))]
         userId = user['id'];
@@ -117,11 +189,17 @@ for calltime in range(output_seconds):
         visitId = uuid.uuid1().hex
         concat_features = []
 
-        for f in range(len(features)):
-            fvalues = feature_descs[f]['fvalues']
-            l = len(fvalues)
-            # pick a random value for this feature
-            concat_features.append(fvalues[random.randint(0,l-1)])
+        lovEntries = []
+
+        # get index to a random lov row for each listed lov
+        for l in xrange(len(lov_descs)):
+            card = len(lov_descs[l]['lovdata'])
+            entry=random.randint(0,card-1)
+            lovEntries.append(entry)
+
+        for f in xrange(len(feature_descs)):
+            fdesc = feature_descs[f]
+            concat_features.append(generate_value(fdesc))
 
         print "%010d|%d|%d|%s|%s"% (calltime+startsecs, userId, deviceId, visitId , string.join(concat_features,'|'))
     
